@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>BIP39 Seed Generator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        html, body {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            /* Never let browser resize us */
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #000000;
+            color: #f2f2f6;
+            touch-action: pan-y;
+            /* position:fixed locks body at exact pixel size — immune to address bar, keyboard */
+            position: fixed;
+            inset: 0;
+        }
+        #scroll-root {
+            position: absolute;
+            inset: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px;
+        }
+        .container {
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+            background: #111111;
+            border-radius: 32px;
+            padding: 24px 20px 30px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            position: relative;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 28px;
+            margin-bottom: 20px;
+            color: #F7931A;
+            letter-spacing: -0.3px;
+        }
+        .section {
+            margin-bottom: 22px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #ffffff;
+            margin-bottom: 10px;
+            letter-spacing: 0.3px;
+        }
+        .option-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .option-btn {
+            flex: 1;
+            background: #1a1a1a;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 8px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #ffffff;
+            transition: 0.15s;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            text-align: center;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+        }
+        .option-btn.active {
+            background: #F7931A;
+            color: white;
+            box-shadow: 0 4px 12px rgba(247, 147, 26, 0.45);
+        }
+        .option-btn:active {
+            opacity: 0.75;
+        }
+        .option-btn small {
+            display: block;
+            font-size: 13px;
+            font-weight: 400;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+        .option-btn.active small {
+            opacity: 0.9;
+        }
+
+        .entropy-display-area {
+            background: #1a1a1a;
+            border-radius: 18px;
+            padding: 14px 16px 32px;
+            height: 190px;
+            border: 2px solid #2a2a2a;
+            transition: border 0.2s;
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .entropy-display-area.focused {
+            border-color: #F7931A;
+        }
+        #entropyDisplay {
+            font-family: "SF Mono", "Menlo", "Monaco", monospace;
+            font-size: 14px;
+            letter-spacing: 1px;
+            word-break: break-all;
+            line-height: 1.7;
+            color: #F7931A;
+            flex: 1;
+            min-width: 40px;
+        }
+        .entropy-placeholder {
+            color: #636366;
+            font-family: -apple-system, sans-serif;
+            font-size: 15px;
+            letter-spacing: 0;
+        }
+        .entropy-counter {
+            font-size: 13px;
+            color: #8e8e93;
+            background: #111111;
+            padding: 3px 12px;
+            border-radius: 40px;
+            white-space: nowrap;
+            font-weight: 500;
+            position: absolute;
+            bottom: 10px;
+            right: 12px;
+        }
+        .input-hint-removed {
+            display: none;
+            padding-left: 4px;
+        }
+
+        .bit-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .bit-btn {
+            flex: 1;
+            padding: 12px 0;
+            border: none;
+            border-radius: 14px;
+            font-size: 22px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.12s;
+            touch-action: manipulation;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            -webkit-touch-callout: none;
+        }
+        .bit-btn:active {
+            opacity: 0.7;
+        }
+        .bit-btn-zero {
+            background: #F7931A;
+            color: #ffffff;
+        }
+        .bit-btn-one {
+            background: #F7931A;
+            color: #ffffff;
+        }
+        .bit-btn-zero:active {
+            background: #d4780f;
+        }
+        .bit-btn-one:active {
+            background: #d4780f;
+        }
+        .bit-btn:disabled {
+            opacity: 0.3;
+            transform: none;
+            pointer-events: none;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .btn {
+            border: none;
+            border-radius: 30px;
+            padding: 12px 18px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            flex: 1;
+            min-width: 90px;
+            transition: 0.15s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            text-align: center;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+        }
+        .btn:active {
+            opacity: 0.75;
+        }
+        .btn-secondary {
+            background: #F7931A;
+            color: #ffffff;
+        }
+        .btn-secondary:active {
+            background: #d4780f;
+        }
+        .btn-primary {
+            background: #F7931A;
+            color: white;
+            box-shadow: 0 4px 12px rgba(247, 147, 26, 0.35);
+        }
+        .btn-primary:active {
+            background: #d4780f;
+        }
+        .btn-primary:disabled {
+            opacity: 0.4;
+            transform: none;
+            pointer-events: none;
+        }
+
+        .paste-area {
+            margin-top: 6px;
+        }
+        .paste-row {
+            display: flex;
+            gap: 10px;
+        }
+        .paste-input {
+            flex: 1;
+            background: #1a1a1a;
+            border: 2px solid #2a2a2a;
+            border-radius: 14px;
+            padding: 10px 14px;
+            color: #f2f2f6;
+            font-family: "SF Mono", "Menlo", "Monaco", monospace;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            outline: none;
+            min-width: 0;
+            width: 100%;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+        .paste-input:focus {
+            border-color: #F7931A;
+        }
+        .paste-input::placeholder {
+            color: #636366;
+            font-family: -apple-system, sans-serif;
+            letter-spacing: 0;
+        }
+        .paste-btn {
+            background: #F7931A;
+            border: none;
+            border-radius: 14px;
+            padding: 10px 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            touch-action: manipulation;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(247, 147, 26, 0.25);
+        }
+        .paste-btn:active {
+            opacity: 0.75;
+            background: #d4780f;
+        }
+
+        .error-msg {
+            color: #ff453a;
+            font-size: 14px;
+            background: #3a1a1a;
+            padding: 10px 14px;
+            border-radius: 12px;
+            margin-top: 12px;
+            border-left: 4px solid #ff453a;
+            display: none;
+        }
+        .error-msg.show {
+            display: block;
+        }
+
+        .result-box {
+            background: #000000;
+            border-radius: 18px;
+            padding: 16px 14px;
+            margin-top: 10px;
+            border: 1px solid #2a2a2a;
+            word-break: break-word;
+        }
+        .mnemonic-phrase {
+            font-family: "SF Mono", "Menlo", "Monaco", monospace;
+            font-size: 16px;
+            line-height: 1.7;
+            color: #F7931A;
+            letter-spacing: 0.3px;
+        }
+        .word-count-badge {
+            display: inline-block;
+            background: rgba(247,147,26,0.15);
+            color: #F7931A;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 3px 12px;
+            border-radius: 40px;
+            margin-top: 10px;
+        }
+        .footer-note {
+            margin-top: 18px;
+            font-size: 12px;
+            color: #636366;
+            text-align: center;
+            border-top: 1px solid #222222;
+            padding-top: 14px;
+            letter-spacing: 0.2px;
+        }
+        #resultSection {
+            display: none;
+        }
+        #resultSection.visible {
+            display: block;
+        }
+
+        .lang-switcher {
+            position: absolute;
+            top: 18px;
+            right: 20px;
+            display: flex;
+            gap: 4px;
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 3px;
+        }
+        .lang-btn {
+            border: none;
+            background: transparent;
+            color: #636366;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 9px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: 0.15s;
+            letter-spacing: 0.4px;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+        }
+        .lang-btn.active {
+            background: #F7931A;
+            color: #ffffff;
+        }
+        .lang-btn:active {
+            opacity: 0.75;
+        }
+
+        @media (max-width: 420px) {
+            .container { padding: 16px 12px; }
+            h1 { font-size: 20px; }
+            .option-btn { font-size: 14px; padding: 10px 6px; }
+            .option-btn small { font-size: 12px; }
+            #entropyDisplay { font-size: 9px; }
+            .bit-btn { font-size: 20px; padding: 10px 0; }
+            .btn { font-size: 14px; padding: 10px 14px; min-width: 70px; }
+            .paste-input { font-size: 14px; padding: 8px 12px; }
+            .paste-btn { font-size: 14px; padding: 8px 16px; }
+            .mnemonic-phrase { font-size: 15px; }
+            .lang-switcher { top: 14px; right: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<script>
+(function() {
+    // Prevent iOS double-tap zoom
+    var lastTap = 0;
+    document.addEventListener('touchend', function(e) {
+        var now = Date.now();
+        if (now - lastTap < 30000) { e.preventDefault(); }
+        lastTap = now;
+    }, { passive: false });
+
+    // Prevent pinch zoom
+    document.addEventListener('touchmove', function(e) {
+        if (e.touches.length > 1) { e.preventDefault(); }
+    }, { passive: false });
+
+    // Prevent gesturestart (iOS Safari zoom gesture)
+    document.addEventListener('gesturestart', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+})();
+</script>
+
+<div id="scroll-root">
+<div class="container">
+    <div class="lang-switcher">
+        <button class="lang-btn active" id="langEn">ENG</button>
+        <button class="lang-btn" id="langRu">RU</button>
+    </div>
+
+    <h1>
+        <svg width="42" height="42" viewBox="0 0 144 145" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 8px;">
+          <path fill="#F7931A" d="M141.845993,89.6650009c-9.6209869,38.5709915-48.6898956,62.0459976-87.2698898,52.4280014C16.0121002,132.4759979-7.46593,93.4079971,2.1570699,54.8390007,11.7711,16.2639999,50.8431015-7.2140098,89.4101028,2.4029901c38.5748978,9.6170104,62.0519028,48.6880095,52.4358902,87.2620108Z"/>
+          <path fill="#fff" d="M48.3110008,84.375c-.3920021.9720001-1.3850021,2.4309998-3.6210022,1.8769989.0790024.1139984-5.7449989-1.4329987-5.7449989-1.4329987l-3.9199982,9.0410004,10.2799988,2.5629959c1.9109993.4790039,3.7879982.9790039,5.632,1.4530029l-3.2670021,13.1269989,7.8910027,1.9690018,3.2369995-12.9869995c2.1580009.5839996,4.25,1.125,6.2980003,1.6340027l-3.2260017,12.9259949,7.8999977,1.9690018,3.2700043-13.1019974c13.4729996,2.5479965,23.6039963,1.5199966,27.8659973-10.663002,3.4370041-9.8099976-.1699982-15.4690018-7.2579956-19.1600037,5.1609955-1.1899948,9.0509949-4.5859985,10.0879974-11.5979958,1.4329987-9.5820007-5.862999-14.7310028-15.8379974-18.1669998l3.2350006-12.9780006-7.8990021-1.9689999-3.151001,12.6359997c-2.0790024-.5180016-4.2099991-1.0060005-6.3310013-1.4890022l3.1709976-12.7199974-7.8939972-1.9690018-3.2389984,12.9760017-15.9309998-3.9459991-2.1020012,8.4369965s5.8610001,1.3430023,5.7369995,1.427002c3.2000008.7989998,3.7770004,2.9160004,3.6809998,4.5940018l-8.8639984,35.5519981ZM85.6869965,87.302002c-2.4440002,9.810997-18.9599991,4.5069962-24.317997,3.1759949l4.3380013-17.3889999c5.3549957,1.3350067,22.5299988,3.9810028,19.9799957,14.2130051ZM88.1269989,61.8499985c-2.2259979,8.9240036-15.9749985,4.3889999-20.4349976,3.2770004l3.9319992-15.7719994c4.4589996,1.1119995,18.8239975,3.1870003,16.5029984,12.4949989Z"/>
+        </svg>
+        <span style="color:#F7931A;">Manual Seed Phrase</span>
+    </h1>
+
+    <div class="section">
+        <div class="section-title" data-i18n="lengthTitle">Entropy length</div>
+        <div class="option-group" id="lengthGroup">
+            <button class="option-btn active" data-bits="128" data-words="12">128 bit <small>12 words</small></button>
+            <button class="option-btn" data-bits="256" data-words="24">256 bit <small>24 words</small></button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title" data-i18n="entropyTitle">Enter binary entropy</div>
+        <div class="entropy-display-area" id="entropyArea">
+            <span id="entropyDisplay" class="entropy-placeholder">Press 0 or 1</span>
+            <span class="entropy-counter" id="counterDisplay">0 / 128</span>
+        </div>
+
+        <div class="bit-buttons">
+            <button class="bit-btn bit-btn-zero" id="bitZero">0</button>
+            <button class="bit-btn bit-btn-one" id="bitOne">1</button>
+        </div>
+
+
+        <div class="action-row">
+            <button class="btn btn-secondary" id="clearBtn">✕ Clear</button>
+            <button class="btn btn-primary" id="generateBtn">⚡ Generate</button>
+        </div>
+
+        <!-- PASTE FIELD -->
+        <div class="paste-area">
+            <div class="paste-row">
+                <input type="text" class="paste-input" id="pasteInput" placeholder="Paste binary entropy (0s and 1s)" spellcheck="false" autocomplete="off">
+                <button class="paste-btn" id="pasteBtn">📋 Paste</button>
+            </div>
+        </div>
+
+        <div id="errorMsg" class="error-msg"></div>
+    </div>
+
+    <div class="section" id="resultSection">
+        <div class="section-title" data-i18n="resultTitle">Mnemonic phrase</div>
+        <div class="result-box">
+            <div class="mnemonic-phrase" id="mnemonicOutput">—</div>
+            <div class="word-count-badge" id="wordCountBadge">12 words</div>
+        </div>
+    </div>
+
+    <div class="footer-note">IN &#8383; WE TRUST </div>
+</div>
+
+<script>
+    (function() {
+        "use strict";
+
+        // ===== СЛОВАРЬ BIP39 (2048 слов) =====
+        const WORDLIST = [
+            "abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse",
+            "access","accident","account","accuse","achieve","acid","acoustic","acquire","across","act",
+            "action","actor","actress","actual","adapt","add","addict","address","adjust","admit",
+            "adult","advance","advice","aerobic","affair","afford","afraid","again","age","agent",
+            "agree","ahead","aim","air","airport","aisle","alarm","album","alcohol","alert",
+            "alien","all","alley","allow","almost","alone","alpha","already","also","alter",
+            "always","amateur","amazing","among","amount","amused","analyst","anchor","ancient","anger",
+            "angle","angry","animal","ankle","announce","annual","another","answer","antenna","antique",
+            "anxiety","any","apart","apology","appear","apple","approve","april","arch","arctic",
+            "area","arena","argue","arm","armed","armor","army","around","arrange","arrest",
+            "arrive","arrow","art","artefact","artist","artwork","ask","aspect","assault","asset",
+            "assist","assume","asthma","athlete","atom","attack","attend","attitude","attract","auction",
+            "audit","august","aunt","author","auto","autumn","average","avocado","avoid","awake",
+            "aware","away","awesome","awful","awkward","axis","baby","bachelor","bacon","badge",
+            "bag","balance","balcony","ball","bamboo","banana","banner","bar","barely","bargain",
+            "barrel","base","basic","basket","battle","beach","bean","beauty","because","become",
+            "beef","before","begin","behave","behind","believe","below","belt","bench","benefit",
+            "best","betray","better","between","beyond","bicycle","bid","bike","bind","biology",
+            "bird","birth","bitter","black","blade","blame","blanket","blast","bleak","bless",
+            "blind","blood","blossom","blouse","blue","blur","blush","board","boat","body",
+            "boil","bomb","bone","bonus","book","boost","border","boring","borrow","boss",
+            "bottom","bounce","box","boy","bracket","brain","brand","brass","brave","bread",
+            "breeze","brick","bridge","brief","bright","bring","brisk","broccoli","broken","bronze",
+            "broom","brother","brown","brush","bubble","buddy","budget","buffalo","build","bulb",
+            "bulk","bullet","bundle","bunker","burden","burger","burst","bus","business","busy",
+            "butter","buyer","buzz","cabbage","cabin","cable","cactus","cage","cake","call",
+            "calm","camera","camp","can","canal","cancel","candy","cannon","canoe","canvas",
+            "canyon","capable","capital","captain","car","carbon","card","cargo","carpet","carry",
+            "cart","case","cash","casino","castle","casual","cat","catalog","catch","category",
+            "cattle","caught","cause","caution","cave","ceiling","celery","cement","census","century",
+            "cereal","certain","chair","chalk","champion","change","chaos","chapter","charge","chase",
+            "chat","cheap","check","cheese","chef","cherry","chest","chicken","chief","child",
+            "chimney","choice","choose","chronic","chuckle","chunk","churn","cigar","cinnamon","circle",
+            "citizen","city","civil","claim","clap","clarify","claw","clay","clean","clerk",
+            "clever","click","client","cliff","climb","clinic","clip","clock","clog","close",
+            "cloth","cloud","clown","club","clump","cluster","clutch","coach","coast","coconut",
+            "code","coffee","coil","coin","collect","color","column","combine","come","comfort",
+            "comic","common","company","concert","conduct","confirm","congress","connect","consider","control",
+            "convince","cook","cool","copper","copy","coral","core","corn","correct","cost",
+            "cotton","couch","country","couple","course","cousin","cover","coyote","crack","cradle",
+            "craft","cram","crane","crash","crater","crawl","crazy","cream","credit","creek",
+            "crew","cricket","crime","crisp","critic","crop","cross","crouch","crowd","crucial",
+            "cruel","cruise","crumble","crunch","crush","cry","crystal","cube","culture","cup",
+            "cupboard","curious","current","curtain","curve","cushion","custom","cute","cycle","dad",
+            "damage","damp","dance","danger","daring","dash","daughter","dawn","day","deal",
+            "debate","debris","decade","december","decide","decline","decorate","decrease","deer","defense",
+            "define","defy","degree","delay","deliver","demand","demise","denial","dentist","deny",
+            "depart","depend","deposit","depth","deputy","derive","describe","desert","design","desk",
+            "despair","destroy","detail","detect","develop","device","devote","diagram","dial","diamond",
+            "diary","dice","diesel","diet","differ","digital","dignity","dilemma","dinner","dinosaur",
+            "direct","dirt","disagree","discover","disease","dish","dismiss","disorder","display","distance",
+            "divert","divide","divorce","dizzy","doctor","document","dog","doll","dolphin","domain",
+            "donate","donkey","donor","door","dose","double","dove","draft","dragon","drama",
+            "drastic","draw","dream","dress","drift","drill","drink","drip","drive","drop",
+            "drum","dry","duck","dumb","dune","during","dust","dutch","duty","dwarf",
+            "dynamic","eager","eagle","early","earn","earth","easily","east","easy","echo",
+            "ecology","economy","edge","edit","educate","effort","egg","eight","either","elbow",
+            "elder","electric","elegant","element","elephant","elevator","elite","else","embark","embody",
+            "embrace","emerge","emotion","employ","empower","empty","enable","enact","end","endless",
+            "endorse","enemy","energy","enforce","engage","engine","enhance","enjoy","enlist","enough",
+            "enrich","enroll","ensure","enter","entire","entry","envelope","episode","equal","equip",
+            "era","erase","erode","erosion","error","erupt","escape","essay","essence","estate",
+            "eternal","ethics","evidence","evil","evoke","evolve","exact","example","excess","exchange",
+            "excite","exclude","excuse","execute","exercise","exhaust","exhibit","exile","exist","exit",
+            "exotic","expand","expect","expire","explain","expose","express","extend","extra","eye",
+            "eyebrow","fabric","face","faculty","fade","faint","faith","fall","false","fame",
+            "family","famous","fan","fancy","fantasy","farm","fashion","fat","fatal","father",
+            "fatigue","fault","favorite","feature","february","federal","fee","feed","feel","female",
+            "fence","festival","fetch","fever","few","fiber","fiction","field","figure","file",
+            "film","filter","final","find","fine","finger","finish","fire","firm","first",
+            "fiscal","fish","fit","fitness","fix","flag","flame","flash","flat","flavor",
+            "flee","flight","flip","float","flock","floor","flower","fluid","flush","fly",
+            "foam","focus","fog","foil","fold","follow","food","foot","force","forest",
+            "forget","fork","fortune","forum","forward","fossil","foster","found","fox","fragile",
+            "frame","frequent","fresh","friend","fringe","frog","front","frost","frown","frozen",
+            "fruit","fuel","fun","funny","furnace","fury","future","gadget","gain","galaxy",
+            "gallery","game","gap","garage","garbage","garden","garlic","garment","gas","gasp",
+            "gate","gather","gauge","gaze","general","genius","genre","gentle","genuine","gesture",
+            "ghost","giant","gift","giggle","ginger","giraffe","girl","give","glad","glance",
+            "glare","glass","glide","glimpse","globe","gloom","glory","glove","glow","glue",
+            "goat","goddess","gold","good","goose","gorilla","gospel","gossip","govern","gown",
+            "grab","grace","grain","grant","grape","grass","gravity","great","green","grid",
+            "grief","grit","grocery","group","grow","grunt","guard","guess","guide","guilt",
+            "guitar","gun","gym","habit","hair","half","hammer","hamster","hand","happy",
+            "harbor","hard","harsh","harvest","hat","have","hawk","hazard","head","health",
+            "heart","heavy","hedgehog","height","hello","helmet","help","hen","hero","hidden",
+            "high","hill","hint","hip","hire","history","hobby","hockey","hold","hole",
+            "holiday","hollow","home","honey","hood","hope","horn","horror","horse","hospital",
+            "host","hotel","hour","hover","hub","huge","human","humble","humor","hundred",
+            "hungry","hunt","hurdle","hurry","hurt","husband","hybrid","ice","icon","idea",
+            "identify","idle","ignore","ill","illegal","illness","image","imitate","immense","immune",
+            "impact","impose","improve","impulse","inch","include","income","increase","index","indicate",
+            "indoor","industry","infant","inflict","inform","inhale","inherit","initial","inject","injury",
+            "inmate","inner","innocent","input","inquiry","insane","insect","inside","inspire","install",
+            "intact","interest","into","invest","invite","involve","iron","island","isolate","issue",
+            "item","ivory","jacket","jaguar","jar","jazz","jealous","jeans","jelly","jewel",
+            "job","join","joke","journey","joy","judge","juice","jump","jungle","junior",
+            "junk","just","kangaroo","keen","keep","ketchup","key","kick","kid","kidney",
+            "kind","kingdom","kiss","kit","kitchen","kite","kitten","kiwi","knee","knife",
+            "knock","know","lab","label","labor","ladder","lady","lake","lamp","language",
+            "laptop","large","later","latin","laugh","laundry","lava","law","lawn","lawsuit",
+            "layer","lazy","leader","leaf","learn","leave","lecture","left","leg","legal",
+            "legend","leisure","lemon","lend","length","lens","leopard","lesson","letter","level",
+            "liar","liberty","library","license","life","lift","light","like","limb","limit",
+            "link","lion","liquid","list","little","live","lizard","load","loan","lobster",
+            "local","lock","logic","lonely","long","loop","lottery","loud","lounge","love",
+            "loyal","lucky","luggage","lumber","lunar","lunch","luxury","lyrics","machine","mad",
+            "magic","magnet","maid","mail","main","major","make","mammal","man","manage",
+            "mandate","mango","mansion","manual","maple","marble","march","margin","marine","market",
+            "marriage","mask","mass","master","match","material","math","matrix","matter","maximum",
+            "maze","meadow","mean","measure","meat","mechanic","medal","media","melody","melt",
+            "member","memory","mention","menu","mercy","merge","merit","merry","mesh","message",
+            "metal","method","middle","midnight","milk","million","mimic","mind","minimum","minor",
+            "minute","miracle","mirror","misery","miss","mistake","mix","mixed","mixture","mobile",
+            "model","modify","mom","moment","monitor","monkey","monster","month","moon","moral",
+            "more","morning","mosquito","mother","motion","motor","mountain","mouse","move","movie",
+            "much","muffin","mule","multiply","muscle","museum","mushroom","music","must","mutual",
+            "myself","mystery","myth","naive","name","napkin","narrow","nasty","nation","nature",
+            "near","neck","need","negative","neglect","neither","nephew","nerve","nest","net",
+            "network","neutral","never","news","next","nice","night","noble","noise","nominee",
+            "noodle","normal","north","nose","notable","note","nothing","notice","novel","now",
+            "nuclear","number","nurse","nut","oak","obey","object","oblige","obscure","observe",
+            "obtain","obvious","occur","ocean","october","odor","off","offer","office","often",
+            "oil","okay","old","olive","olympic","omit","once","one","onion","online",
+            "only","open","opera","opinion","oppose","option","orange","orbit","orchard","order",
+            "ordinary","organ","orient","original","orphan","ostrich","other","outdoor","outer","output",
+            "outside","oval","oven","over","own","owner","oxygen","oyster","ozone","pact",
+            "paddle","page","pair","palace","palm","panda","panel","panic","panther","paper",
+            "parade","parent","park","parrot","party","pass","patch","path","patient","patrol",
+            "pattern","pause","pave","payment","peace","peanut","pear","peasant","pelican","pen",
+            "penalty","pencil","people","pepper","perfect","permit","person","pet","phone","photo",
+            "phrase","physical","piano","picnic","picture","piece","pig","pigeon","pill","pilot",
+            "pink","pioneer","pipe","pistol","pitch","pizza","place","planet","plastic","plate",
+            "play","please","pledge","pluck","plug","plunge","poem","poet","point","polar",
+            "pole","police","pond","pony","pool","popular","portion","position","possible","post",
+            "potato","pottery","poverty","powder","power","practice","praise","predict","prefer","prepare",
+            "present","pretty","prevent","price","pride","primary","print","priority","prison","private",
+            "prize","problem","process","produce","profit","program","project","promote","proof","property",
+            "prosper","protect","proud","provide","public","pudding","pull","pulp","pulse","pumpkin",
+            "punch","pupil","puppy","purchase","purity","purpose","purse","push","put",
+            "puzzle","pyramid","quality","quantum","quarter","question","quick","quit","quiz","quote",
+            "rabbit","raccoon","race","rack","radar","radio","rail","rain","raise","rally",
+            "ramp","ranch","random","range","rapid","rare","rate","rather","raven","raw",
+            "razor","ready","real","reason","rebel","rebuild","recall","receive","recipe","record",
+            "recycle","reduce","reflect","reform","refuse","region","regret","regular","reject","relax",
+            "release","relief","rely","remain","remember","remind","remove","render","renew","rent",
+            "reopen","repair","repeat","replace","report","require","rescue","resemble","resist","resource",
+            "response","result","retire","retreat","return","reunion","reveal","review","reward","rhythm",
+            "rib","ribbon","rice","rich","ride","ridge","rifle","right","rigid","ring",
+            "riot","ripple","risk","ritual","rival","river","road","roast","robot","robust",
+            "rocket","romance","roof","rookie","room","rose","rotate","rough","round","route",
+            "royal","rubber","rude","rug","rule","run","runway","rural","sad","saddle",
+            "sadness","safe","sail","salad","salmon","salon","salt","salute","same","sample",
+            "sand","satisfy","satoshi","sauce","sausage","save","say","scale","scan","scare",
+            "scatter","scene","scheme","school","science","scissors","scorpion","scout","scrap","screen",
+            "script","scrub","sea","search","season","seat","second","secret","section","security",
+            "seed","seek","segment","select","sell","seminar","senior","sense","sentence","series",
+            "service","session","settle","setup","seven","shadow","shaft","shallow","share","shed",
+            "shell","sheriff","shield","shift","shine","ship","shiver","shock","shoe","shoot",
+            "shop","short","shoulder","shove","shrimp","shrug","shuffle","shy","sibling","sick",
+            "side","siege","sight","sign","silent","silk","silly","silver","similar","simple",
+            "since","sing","siren","sister","situate","six","size","skate","sketch","ski",
+            "skill","skin","skirt","skull","slab","slam","sleep","slender","slice","slide",
+            "slight","slim","slogan","slot","slow","slush","small","smart","smile","smoke",
+            "smooth","snack","snake","snap","sniff","snow","soap","soccer","social","sock",
+            "soda","soft","solar","soldier","solid","solution","solve","someone","song","soon",
+            "sorry","sort","soul","sound","soup","source","south","space","spare","spatial",
+            "spawn","speak","special","speed","spell","spend","sphere","spice","spider","spike",
+            "spin","spirit","split","spoil","sponsor","spoon","sport","spot","spray","spread",
+            "spring","spy","square","squeeze","squirrel","stable","stadium","staff","stage","stairs",
+            "stamp","stand","start","state","stay","steak","steel","stem","step","stereo",
+            "stick","still","sting","stock","stomach","stone","stool","story","stove","strategy",
+            "street","strike","strong","struggle","student","stuff","stumble","style","subject","submit",
+            "subway","success","such","sudden","suffer","sugar","suggest","suit","summer","sun",
+            "sunny","sunset","super","supply","supreme","sure","surface","surge","surprise","surround",
+            "survey","suspect","sustain","swallow","swamp","swap","swarm","swear","sweet","swift",
+            "swim","swing","switch","sword","symbol","symptom","syrup","system","table","tackle",
+            "tag","tail","talent","talk","tank","tape","target","task","taste","tattoo",
+            "taxi","teach","team","tell","ten","tenant","tennis","tent","term","test",
+            "text","thank","that","theme","then","theory","there","they","thing","this",
+            "thought","three","thrive","throw","thumb","thunder","ticket","tide","tiger","tilt",
+            "timber","time","tiny","tip","tired","tissue","title","toast","tobacco","today",
+            "toddler","toe","together","toilet","token","tomato","tomorrow","tone","tongue","tonight",
+            "tool","tooth","top","topic","topple","torch","tornado","tortoise","toss","total",
+            "tourist","toward","tower","town","toy","track","trade","traffic","tragic","train",
+            "transfer","trap","trash","travel","tray","treat","tree","trend","trial","tribe",
+            "trick","trigger","trim","trip","trophy","trouble","truck","true","truly","trumpet",
+            "trust","truth","try","tube","tuition","tumble","tuna","tunnel","turkey","turn",
+            "turtle","twelve","twenty","twice","twin","twist","two","type","typical","ugly",
+            "umbrella","unable","unaware","uncle","uncover","under","undo","unfair","unfold","unhappy",
+            "uniform","unique","unit","universe","unknown","unlock","until","unusual","unveil","update",
+            "upgrade","uphold","upon","upper","upset","urban","urge","usage","use","used",
+            "useful","useless","usual","utility","vacant","vacuum","vague","valid","valley","valve",
+            "van","vanish","vapor","various","vast","vault","vehicle","velvet","vendor","venture",
+            "venue","verb","verify","version","very","vessel","veteran","viable","vibrant","vicious",
+            "victory","video","view","village","vintage","violin","virtual","virus","visa","visit",
+            "visual","vital","vivid","vocal","voice","void","volcano","volume","vote","voyage",
+            "wage","wagon","wait","walk","wall","walnut","want","warfare","warm","warrior",
+            "wash","wasp","waste","water","wave","way","wealth","weapon","wear","weasel",
+            "weather","web","wedding","weekend","weird","welcome","west","wet","whale","what",
+            "wheat","wheel","when","where","whip","whisper","wide","width","wife","wild",
+            "will","win","window","wine","wing","wink","winner","winter","wire","wisdom",
+            "wise","wish","witness","wolf","woman","wonder","wood","wool","word","work",
+            "world","worry","worth","wrap","wreck","wrestle","wrist","write","wrong","yard",
+            "year","yellow","you","young","youth","zebra","zero","zone","zoo"
+        ];
+
+        // ===== DOM =====
+        const lengthBtns = document.querySelectorAll('#lengthGroup .option-btn');
+        const entropyDisplay = document.getElementById('entropyDisplay');
+        const counterDisplay = document.getElementById('counterDisplay');
+        const entropyArea = document.getElementById('entropyArea');
+        const bitZero = document.getElementById('bitZero');
+        const bitOne = document.getElementById('bitOne');
+        const clearBtn = document.getElementById('clearBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const pasteInput = document.getElementById('pasteInput');
+        const pasteBtn = document.getElementById('pasteBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const resultSection = document.getElementById('resultSection');
+        const mnemonicOutput = document.getElementById('mnemonicOutput');
+        const wordCountBadge = document.getElementById('wordCountBadge');
+
+        // ===== СОСТОЯНИЕ =====
+        let targetBits = 128;
+        let entropyString = '';
+
+        // ===== ФУНКЦИИ UI =====
+        function updateUI() {
+            const len = entropyString.length;
+            if (len === 0) {
+                entropyDisplay.textContent = T[currentLang].placeholder;
+                entropyDisplay.className = 'entropy-placeholder';
+            } else {
+                entropyDisplay.textContent = entropyString;
+                entropyDisplay.className = '';
+            }
+            counterDisplay.textContent = `${len} / ${targetBits}`;
+            
+            const full = len >= targetBits;
+            bitZero.disabled = full;
+            bitOne.disabled = full;
+            
+            generateBtn.disabled = (len !== targetBits);
+            hideError();
+        }
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.classList.add('show');
+        }
+        function hideError() {
+            errorMsg.classList.remove('show');
+        }
+
+        function setActiveLength(bits) {
+            targetBits = bits;
+            lengthBtns.forEach(btn => {
+                const b = parseInt(btn.dataset.bits, 10);
+                btn.classList.toggle('active', b === bits);
+            });
+            if (entropyString.length > targetBits) {
+                entropyString = entropyString.slice(0, targetBits);
+            }
+            updateUI();
+            resultSection.classList.remove('visible');
+            hideError();
+            pasteInput.placeholder = T[currentLang].pasteInputPh(bits);
+        }
+
+        function appendBit(bit) {
+            if (entropyString.length < targetBits) {
+                entropyString += bit;
+                updateUI();
+                resultSection.classList.remove('visible');
+                hideError();
+            }
+        }
+
+        function clearEntropy() {
+            entropyString = '';
+            updateUI();
+            resultSection.classList.remove('visible');
+            hideError();
+            pasteInput.value = '';
+        }
+
+        function setEntropyFromString(str) {
+            const t = T[currentLang];
+            const cleaned = str.replace(/[^01]/g, '');
+            if (cleaned.length === 0) {
+                showError(t.errNoBinary);
+                return;
+            }
+            if (cleaned.length > targetBits) {
+                showError(t.errTooMany(targetBits, cleaned.length));
+                return;
+            }
+            if (cleaned.length < targetBits) {
+                showError(t.errTooFew(targetBits, cleaned.length));
+                return;
+            }
+            entropyString = cleaned;
+            updateUI();
+            resultSection.classList.remove('visible');
+            hideError();
+            pasteInput.value = '';
+        }
+
+        // ===== ПРОСТОЙ ОБРАБОТЧИК БЕЗ ПРЕВЕНТА ПО УМОЛЧАНИЮ =====
+        function addClickHandler(element, callback) {
+            // Используем только click, так как он работает везде
+            // touchstart используем как резерв для мгновенного отклика на iOS
+            let handled = false;
+            
+            element.addEventListener('touchstart', function(e) {
+                if (!handled) {
+                    handled = true;
+                    callback(e);
+                    setTimeout(() => { handled = false; }, 200);
+                }
+            }, { passive: true });
+            
+            element.addEventListener('click', function(e) {
+                if (!handled) {
+                    handled = true;
+                    callback(e);
+                    setTimeout(() => { handled = false; }, 200);
+                }
+            });
+        }
+
+        // ===== ГЕНЕРАЦИЯ МНЕМОНИКИ =====
+        async function generateMnemonic(entropy) {
+            const bits = entropy.length;
+            if (bits !== 128 && bits !== 256) {
+                throw new Error(T[currentLang].errGenBits);
+            }
+            if (!/^[01]+$/.test(entropy)) {
+                throw new Error(T[currentLang].errGenChars);
+            }
+
+            const bytes = [];
+            for (let i = 0; i < bits; i += 8) {
+                const chunk = entropy.slice(i, i + 8);
+                bytes.push(parseInt(chunk, 2));
+            }
+            const byteArray = new Uint8Array(bytes);
+
+            const sha = new Uint8Array(await crypto.subtle.digest('SHA-256', byteArray));
+            const csBits = bits / 32;
+            let csBinary = sha[0].toString(2).padStart(8, '0');
+            if (csBits < 8) {
+                csBinary = csBinary.slice(0, csBits);
+            }
+            
+            const fullBits = entropy + csBinary;
+            const wordCount = fullBits.length / 11;
+
+            const words = [];
+            for (let i = 0; i < wordCount; i++) {
+                const start = i * 11;
+                const chunk = fullBits.slice(start, start + 11);
+                const idx = parseInt(chunk, 2);
+                words.push(WORDLIST[idx]);
+            }
+            return {
+                mnemonic: words.join(' '),
+                wordCount: wordCount,
+            };
+        }
+
+        async function handleGenerate() {
+            const t = T[currentLang];
+            hideError();
+            const len = entropyString.length;
+            if (len === 0) {
+                showError(t.errEmpty);
+                return;
+            }
+            if (len !== targetBits) {
+                showError(t.errBits(targetBits, len));
+                return;
+            }
+            if (!/^[01]+$/.test(entropyString)) {
+                showError(t.errOnlyBits);
+                return;
+            }
+
+            try {
+                const result = await generateMnemonic(entropyString);
+                mnemonicOutput.textContent = result.mnemonic;
+                wordCountBadge.textContent = t.wordsBadge(result.wordCount);
+                resultSection.classList.add('visible');
+                setTimeout(() => {
+                    resultSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
+            } catch (err) {
+                showError(err.message || t.errGenFail);
+                resultSection.classList.remove('visible');
+            }
+        }
+
+        // ===== TRANSLATIONS =====
+        const T = {
+            en: {
+                lengthTitle: 'Entropy length',
+                btn128: '128 bit',
+                btn128sub: '12 words',
+                btn256: '256 bit',
+                btn256sub: '24 words',
+                entropyTitle: 'Enter binary entropy',
+                placeholder: 'Press 0 or 1',
+                hint: '▶ Press <strong>0</strong> or <strong>1</strong> to input &nbsp;·&nbsp; «Clear» — reset',
+                clearBtn: '✕ Clear',
+                generateBtn: '⚡ Generate',
+                pasteInputPh: (bits) => `Paste ${bits} bits (0s and 1s)`,
+                pasteBtn: '📋 Paste',
+                resultTitle: 'Mnemonic phrase',
+                wordsBadge: (n) => `${n} words`,
+                errEmpty: 'Enter binary entropy (0s and 1s)',
+                errBits: (need, got) => `Exactly ${need} bits required. Now: ${got}`,
+                errOnlyBits: 'Entropy must contain only 0s and 1s',
+                errGenBits: 'Entropy must be 128 or 256 bits',
+                errGenChars: 'Entropy contains invalid characters',
+                errPasteEmpty: 'Input field is empty',
+                errNoBinary: 'String contains no binary data (0s and 1s)',
+                errTooMany: (need, got) => `Too many bits. Exactly ${need} required. Got: ${got}`,
+                errTooFew: (need, got) => `Not enough bits. Exactly ${need} required. Got: ${got}`,
+                errGenFail: 'Generation error',
+            },
+            ru: {
+                lengthTitle: 'Длина энтропии',
+                btn128: '128 бит',
+                btn128sub: '12 слов',
+                btn256: '256 бит',
+                btn256sub: '24 слова',
+                entropyTitle: 'Введите бинарную энтропию',
+                placeholder: 'Нажмите 0 или 1',
+                hint: '▶ Нажмите <strong>0</strong> или <strong>1</strong> для ввода &nbsp;·&nbsp; «Очистить» — сброс',
+                clearBtn: '✕ Очистить',
+                generateBtn: '⚡ Сгенерировать',
+                pasteInputPh: (bits) => `Вставьте ${bits} бит (0 и 1)`,
+                pasteBtn: '📋 Вставить',
+                resultTitle: 'Мнемоническая фраза',
+                wordsBadge: (n) => `${n} слов`,
+                errEmpty: 'Введите бинарную энтропию (0 и 1)',
+                errBits: (need, got) => `Требуется ровно ${need} бит. Сейчас: ${got}`,
+                errOnlyBits: 'Энтропия должна содержать только 0 и 1',
+                errGenBits: 'Энтропия должна быть 128 или 256 бит',
+                errGenChars: 'Энтропия содержит недопустимые символы',
+                errPasteEmpty: 'Поле ввода пустое',
+                errNoBinary: 'Строка не содержит бинарных данных (0 и 1)',
+                errTooMany: (need, got) => `Слишком много бит. Требуется ровно ${need}. Получено: ${got}`,
+                errTooFew: (need, got) => `Недостаточно бит. Требуется ровно ${need}. Получено: ${got}`,
+                errGenFail: 'Ошибка генерации',
+            }
+        };
+
+        let currentLang = 'en';
+
+        function applyLang(lang) {
+            currentLang = lang;
+            const t = T[lang];
+
+            // lang buttons
+            document.getElementById('langEn').classList.toggle('active', lang === 'en');
+            document.getElementById('langRu').classList.toggle('active', lang === 'ru');
+
+            // section titles
+            document.querySelector('[data-i18n="lengthTitle"]').textContent = t.lengthTitle;
+            document.querySelector('[data-i18n="entropyTitle"]').textContent = t.entropyTitle;
+
+            // length buttons
+            const btn128 = document.querySelector('[data-bits="128"]');
+            btn128.childNodes[0].textContent = t.btn128 + ' ';
+            btn128.querySelector('small').textContent = t.btn128sub;
+            const btn256 = document.querySelector('[data-bits="256"]');
+            btn256.childNodes[0].textContent = t.btn256 + ' ';
+            btn256.querySelector('small').textContent = t.btn256sub;
+
+            // buttons
+            document.getElementById('clearBtn').textContent = t.clearBtn;
+            document.getElementById('generateBtn').textContent = t.generateBtn;
+            document.getElementById('pasteBtn').textContent = t.pasteBtn;
+
+            // result title
+            document.querySelector('[data-i18n="resultTitle"]').textContent = t.resultTitle;
+
+            // placeholder in paste input
+            pasteInput.placeholder = t.pasteInputPh(targetBits);
+
+            // entropy display placeholder (only if empty)
+            if (entropyString.length === 0) {
+                entropyDisplay.textContent = t.placeholder;
+                entropyDisplay.className = 'entropy-placeholder';
+            }
+
+            // word count badge (if result visible)
+            if (resultSection.classList.contains('visible')) {
+                const wc = mnemonicOutput.textContent.trim().split(/\s+/).length;
+                wordCountBadge.textContent = t.wordsBadge(wc);
+            }
+        }
+
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        function init() {
+            // Выбор длины
+            lengthBtns.forEach(btn => {
+                addClickHandler(btn, function() {
+                    const bits = parseInt(btn.dataset.bits, 10);
+                    setActiveLength(bits);
+                });
+            });
+
+            // Кнопки 0 и 1
+            addClickHandler(bitZero, function() { appendBit('0'); });
+            addClickHandler(bitOne, function() { appendBit('1'); });
+
+            // Очистка
+            addClickHandler(clearBtn, clearEntropy);
+
+            // Генерация
+            addClickHandler(generateBtn, handleGenerate);
+
+            // Вставка из поля
+            addClickHandler(pasteBtn, function() {
+                const val = pasteInput.value;
+                if (val.trim() === '') {
+                    showError(T[currentLang].errPasteEmpty);
+                    return;
+                }
+                setEntropyFromString(val);
+            });
+
+            // Enter в поле вставки
+            pasteInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = this.value;
+                    if (val.trim() === '') {
+                        showError(T[currentLang].errPasteEmpty);
+                        return;
+                    }
+                    setEntropyFromString(val);
+                }
+            });
+
+            // Lang switcher
+            addClickHandler(document.getElementById('langEn'), function() { applyLang('en'); });
+            addClickHandler(document.getElementById('langRu'), function() { applyLang('ru'); });
+
+            // Начальное состояние
+            setActiveLength(128);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+</script>
+
+</div><!-- /scroll-root -->
+</body>
+</html>
