@@ -19,7 +19,9 @@ Sometimes it's unclear who's holding the coins there and why. Either laziness go
 
 We can also apply all 128 symbols of binary entropy from 1.
 For example,
-1 ...
+11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+The binary entropy of all 128 consisting of units yields a valid mnemonic phrase
+zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong
 https://www.blockchain.com/ru/explorer/addresses/btc/1EjnS13zBgN6tUgy6U64qFeh53fyAeUsqE
 
 But we're tossing a coin, and we're not lazy: 128 times for a 12-word mnemonic phrase, or 256 times for a 24-word mnemonic phrase.
